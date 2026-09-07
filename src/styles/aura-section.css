@@ -1,0 +1,63 @@
+/*
+ * Aura config section. Every selector is scoped under `.pfa-aura`.
+ *
+ * Module CSS is unlayered and outranks core's cascade layers, so a bare `.notes` or element
+ * rule here would repaint the whole application. Nothing in this file is allowed to escape
+ * the section root.
+ */
+
+.pfa-aura .pfa-aura-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Explicit colour, not inherited. PF1's V1 item sheets style neither `.hint` nor `.notes`,
+   so left alone these land on whatever generic rule wins and come out near-white on beige.
+   No `opacity` - the muted look is the colour's job. */
+.pfa-aura .notes {
+  margin: 2px 0 6px;
+  color: var(--color-text-dark-secondary, #4b4a44);
+  font-size: var(--font-size-11, 11px);
+}
+
+/* Checkbox rows: wrap rather than squeeze, and keep the box beside its label. */
+.pfa-aura .pfa-aura-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: center;
+}
+
+/* No font-size override here. Foundry sizes the checkbox from `--checkbox-size`, which
+   defaults to `--font-size-16`; shrinking only the label left a 16px box beside 12px text,
+   and centring a mismatched pair still reads as misaligned. Inherit the sheet's own size
+   and pin the box to it instead, so the two always scale together. */
+.pfa-aura label.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.pfa-aura label.checkbox input[type="checkbox"],
+.pfa-aura .pfa-aura-checks input[type="checkbox"] {
+  --checkbox-size: 1em;
+  flex: 0 0 auto;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.pfa-aura .pfa-aura-body .form-group {
+  margin: 3px 0;
+}
+
+/* The source link on a child buff. */
+.pfa-aura .pfa-aura-open {
+  color: var(--pf1-control-color, #782e22);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}

@@ -1,0 +1,31 @@
+{
+  "PF1AURAS.Sheet.Title": "Aura",
+  "PF1AURAS.Sheet.Toggle": "Click to expand / collapse",
+  "PF1AURAS.Sheet.Enabled": "Share this buff as an aura",
+  "PF1AURAS.Sheet.Radius": "Radius",
+  "PF1AURAS.Sheet.RadiusHint": "Formulas allowed, e.g. 10 + @classes.paladin.level",
+  "PF1AURAS.Sheet.Recipients": "Share with",
+  "PF1AURAS.Sheet.RecipientsHint": "Relative to this token's disposition.",
+  "PF1AURAS.Sheet.Relation.ally": "Allies",
+  "PF1AURAS.Sheet.Relation.enemy": "Enemies",
+  "PF1AURAS.Sheet.Relation.neutral": "Neutral",
+  "PF1AURAS.Sheet.IncludeSelf": "Include self",
+  "PF1AURAS.Sheet.WhileInactive": "Share while off",
+  "PF1AURAS.Sheet.WhileUnconscious": "Share while down",
+  "PF1AURAS.Sheet.IgnoreElevation": "Ignore elevation",
+  "PF1AURAS.Sheet.ChildNote": "Shared by an aura. Edit the source buff instead.",
+  "PF1AURAS.Sheet.Source": "Source",
+  "PF1AURAS.Sheet.SourceGone": "Source no longer available",
+
+  "PF1AURAS.Settings.hpFallback.Name": "Stop auras below 0 HP",
+  "PF1AURAS.Settings.hpFallback.Hint": "Only for worlds without condition automation. Auras normally stop when the emitter is unconscious or dead.",
+
+  "PF1AURAS.Settings.quietWindow.Name": "Settle delay (ms)",
+  "PF1AURAS.Settings.quietWindow.Hint": "Wait this long after movement stops before applying full auras.",
+
+  "PF1AURAS.Settings.settleCeiling.Name": "Maximum settle wait (ms)",
+  "PF1AURAS.Settings.settleCeiling.Hint": "Apply anyway once this long has passed, for tokens that never stop moving.",
+
+  "PF1AURAS.Settings.fastDebounce.Name": "Aura edit delay (ms)",
+  "PF1AURAS.Settings.fastDebounce.Hint": "How quickly edits to an aura buff reach the copies. Not affected by movement."
+}

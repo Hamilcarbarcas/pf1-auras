@@ -1,0 +1,45 @@
+{
+  "id": "pf1-auras",
+  "title": "PF1 Auras",
+  "description": "<p>Aura buffs for Pathfinder 1e: a buff with a radius is shared with everyone standing in it. Applies cheaply as derived changes where it can, and as real buff items where it must.</p>",
+  "authors": [
+    {
+      "name": "Hamilcarbarcas",
+      "flags": {}
+    }
+  ],
+  "version": "0.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "esmodules": [
+    "src/scripts/module.mjs"
+  ],
+  "styles": [
+    "src/common/sheet/kit.css",
+    "src/styles/aura-section.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf1",
+        "type": "system",
+        "compatibility": {
+          "minimum": "11"
+        }
+      }
+    ]
+  },
+  "url": "https://github.com/Hamilcarbarcas/pf1-auras",
+  "license": "LICENSE",
+  "flags": {}
+}

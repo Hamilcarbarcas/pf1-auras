@@ -1,0 +1,12 @@
+{
+  "dest": "src/common",
+  "vars": {
+    "PREFIX": "pfa-"
+  },
+  "files": [
+    "sheet/collapse.mjs",
+    "sheet/formula-preview.mjs",
+    "sheet/field-bind.mjs",
+    "sheet/kit.css"
+  ]
+}
