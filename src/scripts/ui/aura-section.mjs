@@ -65,20 +65,20 @@ function childMarkup(item) {
 function editorMarkup(cfg) {
   const checked = (on) => (on ? " checked" : "");
 
+  // Input and text on ONE line: a newline between them becomes a leading space in the
+  // anonymous flex item core's `label.checkbox` creates, widening the gap unevenly.
   const relations = RELATIONS.map(
-    (rel) => `
-      <label class="checkbox">
-        <input type="checkbox" data-field="recipients" value="${rel}"${checked(cfg.recipients.includes(rel))}/>
-        ${t(RELATION_LABELS[rel])}
-      </label>`
+    (rel) =>
+      `<label class="checkbox"><input type="checkbox" data-field="recipients" value="${rel}"${checked(
+        cfg.recipients.includes(rel)
+      )}/> ${t(RELATION_LABELS[rel])}</label>`
   ).join("");
 
   const switches = SWITCHES.map(
-    ([name, label]) => `
-      <label class="checkbox">
-        <input type="checkbox" data-field="${name}"${checked(cfg[name])}/>
-        ${t(label)}
-      </label>`
+    ([name, label]) =>
+      `<label class="checkbox"><input type="checkbox" data-field="${name}"${checked(
+        cfg[name]
+      )}/> ${t(label)}</label>`
   ).join("");
 
   return `
@@ -88,10 +88,9 @@ function editorMarkup(cfg) {
   </h3>
   <div class="${MARKER}-body">
     <div class="form-group">
-      <label class="checkbox">
-        <input type="checkbox" data-field="enabled"${checked(cfg.enabled)}/>
-        ${t("PF1AURAS.Sheet.Enabled")}
-      </label>
+      <label class="checkbox"><input type="checkbox" data-field="enabled"${checked(cfg.enabled)}/> ${t(
+        "PF1AURAS.Sheet.Enabled"
+      )}</label>
     </div>
 
     <div class="form-group">
