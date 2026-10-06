@@ -22,6 +22,9 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   state.
 
 ### Fixed
+- **Adding or changing an entry in a sheet section no longer jumps the sheet back to the top of
+  the tab.** Sections from the shared sheet kit now restore the scroll position once they have
+  drawn.
 
 - Checkbox labels in the aura section sat slightly off-centre from their boxes.
 - Editing an aura buff — changing its level, a formula, its description — now reaches the
