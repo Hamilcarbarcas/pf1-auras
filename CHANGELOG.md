@@ -6,6 +6,10 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
 
 ### Added
 
+- **Aura groups.** Buffs on one character that share a **Group** name arrive on each
+  recipient as a single buff, so a paladin's three auras put one buff on each ally instead
+  of three. Fewer buffs means less lag when allies move in and out of range, and fewer
+  token icons.
 - **Aura section on the buff sheet** (Advanced tab). Enable the aura, set a radius with a
   live `= value` readout, and choose who receives it. Collapsed until used; the header
   shows the resolved radius while closed.
@@ -22,6 +26,9 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   state.
 
 ### Fixed
+
+- Editing an aura buff's module settings, such as a roll-bonuses bonus, now reaches the
+  copies other characters hold. Previously only changes, notes, and other system data did.
 - **Adding or changing an entry in a sheet section no longer jumps the sheet back to the top of
   the tab.** Sections from the shared sheet kit now restore the scroll position once they have
   drawn.
@@ -31,9 +38,15 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   copies immediately. Previously the change waited until something else happened on the
   scene, such as a token moving.
 
+### Removed
+
+- **Include self.** An aura's owner already has the buff, so it only ever added a duplicate.
+  To share a buff with allies but not yourself, turn the buff off and tick **Share while
+  off**.
+
 ### Also added
 
-- Aura config on buff items: radius formula, recipients, include self, share while
+- Aura config on buff items: radius formula, recipients, share while
   inactive, share while unconscious, application mode, ignore elevation.
 - `game.pf1Auras` console API — `configure`, `clear`, `read`, `refresh`, `membership`,
   `emitters`, `distance`, `debug`.

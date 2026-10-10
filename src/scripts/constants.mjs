@@ -13,8 +13,8 @@ export const DEFAULT_AURA = Object.freeze({
   enabled: false,
   radius: "",
   recipients: Object.freeze(["ally"]),
-  includeSelf: false,
   whileInactive: false,
   whileUnconscious: false,
   ignoreElevation: false,
+  group: "",
 });

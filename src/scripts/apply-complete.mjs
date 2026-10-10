@@ -10,6 +10,7 @@
  * next flush instead of leaving something stranded.
  */
 
+import { groupKey } from "./config.mjs";
 import { CHILD_FLAG, MODULE_ID } from "./constants.mjs";
 import * as scheduler from "./scheduler.mjs";
 
@@ -31,7 +32,7 @@ function hash(str) {
   return (h >>> 0).toString(36);
 }
 
-/** Existing children on an actor, keyed by the emitter they came from. */
+/** Existing children on an actor, by child key: emitter uuid, or actor and group. */
 function childrenOf(actor) {
   const out = new Map();
   for (const item of actor.items) {
@@ -42,14 +43,14 @@ function childrenOf(actor) {
 }
 
 /**
- * The child item an emitter should produce right now.
+ * An emitter's buff as plain data, formulas resolved.
  *
  * Formulas are resolved against the EMITTER's roll data, because the change belongs to the
  * emitter's numbers, not the recipient's. The payload hash covers the resolved result, so a
  * parent that later changes (the bard levels up, Inspire Courage improves) is detected and
  * the existing child updated in place rather than left frozen at creation time.
  */
-function buildChild(emitter, rollData) {
+function resolvedCopy(emitter, rollData) {
   const data = emitter.item.toObject();
   delete data._id;
 
@@ -65,8 +66,11 @@ function buildChild(emitter, rollData) {
       { missing: 0 }
     );
   }
+  return data;
+}
 
-  const label = `${emitter.item.name} (${emitter.actor.name})`;
+/** Stamp the child-only fields onto built data and hash it. */
+function finalize(data, { key, label, members }) {
   data.name = label;
   data.system.identifiedName = label;
   data.system.active = true;
@@ -76,14 +80,194 @@ function buildChild(emitter, rollData) {
   // charge or child link would either do nothing or resolve against the wrong sheet.
   data.system.links = {};
 
-  const payload = hash(JSON.stringify({ name: data.name, img: data.img, system: data.system }));
+  // `members` is left out for an ungrouped child so its hash matches what earlier versions
+  // wrote, and the upgrade touches nothing.
+  const payload = hash(
+    JSON.stringify({ name: data.name, img: data.img, system: data.system, ...(members ? { members } : {}) })
+  );
 
   // The module's flag block is REPLACED, not merged: a child carrying the parent's aura
   // config would emit an aura of its own and the whole thing would cascade.
   data.flags ??= {};
-  data.flags[MODULE_ID] = { [CHILD_FLAG]: { source: emitter.uuid, hash: payload } };
+  delete data.flags[MODULE_ID];
+  const flagsHash = hash(JSON.stringify(data.flags));
+  data.flags[MODULE_ID] = {
+    [CHILD_FLAG]: { source: key, hash: payload, flagsHash, ...(members ? { members } : {}) },
+  };
 
-  return { data, payload };
+  return { data, payload, flagsHash };
+}
+
+/** The child for an ungrouped emitter, keyed by its own uuid. */
+function buildSingle(emitter, rollData) {
+  return finalize(resolvedCopy(emitter, rollData), {
+    key: emitter.uuid,
+    label: `${emitter.item.name} (${emitter.actor.name})`,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Groups. DESIGN.md §13
+// ---------------------------------------------------------------------------
+
+// Namespaces that differ on every item by construction; comparing them would make every
+// group a conflict. The lead's copy is kept.
+const BOOKKEEPING = new Set(["core", "scene-packer", MODULE_ID]);
+
+// Members already reported as split out, so a flush per move doesn't repeat the message.
+const warned = new Set();
+
+const bySheetOrder = (a, b) =>
+  (a.item.sort ?? 0) - (b.item.sort ?? 0) ||
+  a.item.name.localeCompare(b.item.name) ||
+  a.item.id.localeCompare(b.item.id);
+
+const comparable = (flags) =>
+  Object.fromEntries(Object.entries(flags ?? {}).filter(([ns]) => !BOOKKEEPING.has(ns)));
+
+/** Leaf values of a nested object by dotted path. Arrays are leaves. */
+function leaves(obj, prefix = "", out = new Map()) {
+  for (const [k, v] of Object.entries(obj ?? {})) {
+    const path = prefix ? `${prefix}.${k}` : k;
+    if (v && typeof v === "object" && !Array.isArray(v)) leaves(v, path, out);
+    else out.set(path, v);
+  }
+  return out;
+}
+
+/** First path where `incoming` would overwrite a different value in `base`, or null. */
+function clash(base, incoming, prefix = "") {
+  const have = leaves(base, prefix);
+  for (const [path, value] of leaves(incoming, prefix)) {
+    if (have.has(path) && JSON.stringify(have.get(path)) !== JSON.stringify(value)) return path;
+  }
+  return null;
+}
+
+/**
+ * Entries with repeated `_id`s re-keyed. PF1 keys item.changes and item.scriptCalls by id,
+ * so a duplicate would silently replace another member's entry. The new id is derived, not
+ * random, so the payload hash stays stable across flushes.
+ */
+function uniqueIds(entries, seen, salt) {
+  return entries.map((entry) => {
+    let id = entry._id;
+    if (id && seen.has(id)) {
+      let n = 0;
+      do id = (hash(`${salt}:${entry._id}:${n++}`) + "00000000").slice(0, 8);
+      while (seen.has(id));
+      entry = { ...entry, _id: id };
+    }
+    if (id) seen.add(id);
+    return entry;
+  });
+}
+
+function reportSplit(member, group, path) {
+  if (warned.has(member.uuid)) return;
+  warned.add(member.uuid);
+  console.error(
+    `${MODULE_ID} | "${member.item.name}" on ${member.actor.name} can't join group "${group}": ` +
+      `"${path}" differs from another member. Shared as its own buff instead.`
+  );
+}
+
+/**
+ * One child from several emitters on the same actor. The lead (first in sheet order)
+ * supplies everything that isn't merged. A member whose flags clash is split out rather
+ * than merged over, which would silently lose one member's value. DESIGN.md §13.4
+ *
+ * @returns {{built: object, split: object[]}}
+ */
+function buildGroup(key, members, rollDataFor) {
+  members.sort(bySheetOrder);
+  const lead = members[0];
+  const group = lead.cfg.group;
+
+  const data = resolvedCopy(lead, rollDataFor(lead));
+  const sys = data.system;
+  sys.flags ??= {};
+  sys.changeFlags ??= {};
+
+  const changes = [];
+  const contextNotes = [];
+  const scriptCalls = [];
+  const conditions = new Set();
+  const sections = [];
+  const ids = { changes: new Set(), scriptCalls: new Set() };
+  const joined = [];
+  const split = [];
+
+  for (const member of members) {
+    const part = member === lead ? data : resolvedCopy(member, rollDataFor(member));
+    const ps = part.system;
+
+    if (member !== lead) {
+      const where =
+        clash(comparable(data.flags), comparable(part.flags), "flags") ??
+        clash(sys.flags.dictionary, ps.flags?.dictionary, "system.flags.dictionary");
+      if (where) {
+        reportSplit(member, group, where);
+        split.push(member);
+        continue;
+      }
+
+      data.flags = foundry.utils.mergeObject(data.flags ?? {}, comparable(part.flags), { inplace: false });
+      sys.flags.boolean = { ...sys.flags.boolean, ...ps.flags?.boolean };
+      sys.flags.dictionary = { ...sys.flags.dictionary, ...ps.flags?.dictionary };
+      for (const [flag, on] of Object.entries(ps.changeFlags ?? {})) if (on) sys.changeFlags[flag] = true;
+    }
+
+    changes.push(...uniqueIds(ps.changes ?? [], ids.changes, member.uuid));
+    scriptCalls.push(...uniqueIds(ps.scriptCalls ?? [], ids.scriptCalls, member.uuid));
+    contextNotes.push(...(ps.contextNotes ?? []));
+    for (const c of ps.conditions ?? []) conditions.add(c);
+    sections.push(`<h3>${foundry.utils.escapeHTML(member.item.name)}</h3>${ps.description?.value ?? ""}`);
+    joined.push(member.uuid);
+  }
+
+  sys.changes = changes;
+  sys.contextNotes = contextNotes;
+  sys.scriptCalls = scriptCalls;
+  sys.conditions = [...conditions];
+  sys.description = { ...sys.description, value: sections.join("") };
+
+  const built = finalize(data, { key, label: `${group} (${lead.actor.name})`, members: joined });
+  return { built, split };
+}
+
+/**
+ * Every child one recipient should hold, by child key. An ungrouped emitter keys by its own
+ * uuid; a group keys by actor and group, and keeps that key even with one member in range so
+ * a second member arriving is an update, not a delete and create. DESIGN.md §13.3
+ */
+function desiredChildren(desired, emitters, rollDataFor) {
+  const out = new Map();
+  const groups = new Map();
+
+  for (const uuid of desired) {
+    const emitter = emitters.get(uuid);
+    if (!emitter) continue;
+
+    const g = groupKey(emitter.cfg);
+    if (!g) {
+      out.set(uuid, buildSingle(emitter, rollDataFor(emitter)));
+      continue;
+    }
+
+    const key = `${emitter.actor.uuid}::${g}`;
+    let members = groups.get(key);
+    if (!members) groups.set(key, (members = []));
+    members.push(emitter);
+  }
+
+  for (const [key, members] of groups) {
+    const { built, split } = buildGroup(key, members, rollDataFor);
+    out.set(key, built);
+    for (const member of split) out.set(member.uuid, buildSingle(member, rollDataFor(member)));
+  }
+
+  return out;
 }
 
 /** Every actor worth reconciling: current recipients, everyone on the scene, and the departed. */
@@ -113,6 +297,11 @@ async function reconcile(membershipMap, emitters) {
   if (!isPrimaryWriter()) return;
 
   const rollData = new Map();
+  const rollDataFor = (emitter) => {
+    let rd = rollData.get(emitter.uuid);
+    if (!rd) rollData.set(emitter.uuid, (rd = emitter.item.getRollData()));
+    return rd;
+  };
   const plan = [];
 
   for (const { actor, desired } of reconcileTargets(membershipMap).values()) {
@@ -123,32 +312,35 @@ async function reconcile(membershipMap, emitters) {
     const updates = [];
     const deletes = [];
 
-    for (const sourceUuid of desired) {
-      const emitter = emitters.get(sourceUuid);
-      if (!emitter) continue;
+    const wanted = desiredChildren(desired, emitters, rollDataFor);
 
-      let rd = rollData.get(sourceUuid);
-      if (!rd) rollData.set(sourceUuid, (rd = emitter.item.getRollData()));
-
-      const { data, payload } = buildChild(emitter, rd);
-      const current = existing.get(sourceUuid);
+    for (const [key, { data, payload, flagsHash }] of wanted) {
+      const current = existing.get(key);
+      const stored = current?.flags[MODULE_ID][CHILD_FLAG];
 
       if (!current) {
         creates.push(data);
-      } else if (current.flags[MODULE_ID][CHILD_FLAG].hash !== payload) {
+      } else if (stored.flagsHash !== undefined && stored.flagsHash !== flagsHash) {
+        // An update merges flags and can't drop a key a departed member brought, so a flags
+        // change replaces the child. A child from before flagsHash existed counts as a
+        // match and picks the hash up on its next update. DESIGN.md §13.5
+        deletes.push(current.id);
+        creates.push(data);
+      } else if (stored.hash !== payload) {
         // Update in place rather than replace, so the duration clock and the underlying
         // Active Effect survive the parent changing.
         updates.push({
           _id: current.id,
           name: data.name,
+          img: data.img,
           system: data.system,
-          [`flags.${MODULE_ID}.${CHILD_FLAG}.hash`]: payload,
+          [`flags.${MODULE_ID}.${CHILD_FLAG}`]: data.flags[MODULE_ID][CHILD_FLAG],
         });
       }
     }
 
-    for (const [sourceUuid, item] of existing) {
-      if (!desired.has(sourceUuid)) deletes.push(item.id);
+    for (const [key, item] of existing) {
+      if (!wanted.has(key)) deletes.push(item.id);
     }
 
     if (creates.length || updates.length || deletes.length) {

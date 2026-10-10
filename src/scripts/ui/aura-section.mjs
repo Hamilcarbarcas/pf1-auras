@@ -22,7 +22,6 @@ const RELATION_LABELS = {
 };
 
 const SWITCHES = [
-  ["includeSelf", "PF1AURAS.Sheet.IncludeSelf"],
   ["whileInactive", "PF1AURAS.Sheet.WhileInactive"],
   ["whileUnconscious", "PF1AURAS.Sheet.WhileUnconscious"],
   ["ignoreElevation", "PF1AURAS.Sheet.IgnoreElevation"],
@@ -38,11 +37,18 @@ function resolvedRadius(item, cfg) {
   return roll.err ? null : roll.total;
 }
 
-/** Read-only face shown on a child buff. */
+/** One source link on a child's read-only face. */
+function sourceLink(uuid) {
+  const parent = uuid ? fromUuidSync(uuid) : null;
+  if (!parent) return `<span>${t("PF1AURAS.Sheet.SourceGone")}</span>`;
+  const label = esc(`${parent.name} – ${parent.actor?.name ?? ""}`.trim());
+  return `<a class="${MARKER}-open" data-uuid="${esc(uuid)}">${label}</a>`;
+}
+
+/** Read-only face shown on a child buff. A group child lists every member. DESIGN.md §13.6 */
 function childMarkup(item) {
-  const source = item.flags?.[MODULE_ID]?.[CHILD_FLAG]?.source;
-  const parent = source ? fromUuidSync(source) : null;
-  const label = parent ? esc(`${parent.name} — ${parent.actor?.name ?? ""}`.trim()) : t("PF1AURAS.Sheet.SourceGone");
+  const flag = item.flags?.[MODULE_ID]?.[CHILD_FLAG] ?? {};
+  const sources = flag.members ?? [flag.source];
 
   return `
 <div class="${MARKER}">
@@ -53,9 +59,7 @@ function childMarkup(item) {
     <p class="notes">${t("PF1AURAS.Sheet.ChildNote")}</p>
     <div class="form-group">
       <label>${t("PF1AURAS.Sheet.Source")}</label>
-      <div class="form-fields">
-        ${parent ? `<a class="${MARKER}-open" data-uuid="${esc(source)}">${label}</a>` : `<span>${label}</span>`}
-      </div>
+      <div class="form-fields ${MARKER}-sources">${sources.map(sourceLink).join("")}</div>
     </div>
   </div>
 </div>`;
@@ -109,6 +113,15 @@ function editorMarkup(cfg) {
     <p class="notes">${t("PF1AURAS.Sheet.RecipientsHint")}</p>
 
     <div class="form-group">
+      <label>${t("PF1AURAS.Sheet.Group")}</label>
+      <div class="form-fields">
+        <input type="text" data-field="group" value="${esc(cfg.group)}"
+               placeholder="${t("PF1AURAS.Sheet.GroupPlaceholder")}"/>
+      </div>
+    </div>
+    <p class="notes">${t("PF1AURAS.Sheet.GroupHint")}</p>
+
+    <div class="form-group">
       <div class="form-fields ${MARKER}-checks">${switches}</div>
     </div>
   </div>
@@ -137,10 +150,12 @@ export async function inject(sheet, html, options) {
   tab.append(section);
 
   if (child) {
-    section.querySelector(`.${MARKER}-open`)?.addEventListener("click", (event) => {
-      event.preventDefault();
-      fromUuidSync(event.currentTarget.dataset.uuid)?.sheet?.render(true, { focus: true });
-    });
+    for (const link of section.querySelectorAll(`.${MARKER}-open`)) {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        fromUuidSync(event.currentTarget.dataset.uuid)?.sheet?.render(true, { focus: true });
+      });
+    }
     makeCollapsible(sheet, section, { key: "aura", marker: MARKER, configured: false });
     return;
   }
@@ -164,7 +179,7 @@ export async function inject(sheet, html, options) {
       enabled: { type: "checkbox", onChange: badge },
       radius: { type: "text", onChange: () => (refreshPreview?.(), badge()) },
       recipients: { type: "set" },
-      includeSelf: { type: "checkbox" },
+      group: { type: "text" },
       whileInactive: { type: "checkbox" },
       whileUnconscious: { type: "checkbox" },
       ignoreElevation: { type: "checkbox" },

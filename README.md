@@ -12,7 +12,8 @@
 - [What it does](#what-it-does)
 - [Configuring an aura](#configuring-an-aura)
   - [Options](#options)
-  - [Fast and Complete](#fast-and-complete)
+  - [How an aura is applied](#how-an-aura-is-applied)
+  - [Grouping auras](#grouping-auras)
 - [Settings](#settings)
 - [Current state](#current-state)
 
@@ -55,10 +56,10 @@ game.pf1Auras.configure(item, { enabled: true, radius: "30", recipients: ["ally"
 | `enabled` | `false` | Whether the aura emits at all |
 | `radius` | `""` | Radius formula, in scene units |
 | `recipients` | `["ally"]` | Any of `"ally"`, `"enemy"`, `"neutral"` — or `"all"` |
-| `includeSelf` | `false` | Whether the emitter also receives its own aura |
 | `whileInactive` | `false` | Emit even when the buff is toggled off |
 | `whileUnconscious` | `false` | Emit even while the emitter is unconscious or dead |
 | `ignoreElevation` | `false` | Treat height differences as zero distance |
+| `group` | `""` | Merge with this actor's other auras of the same group – see [Grouping auras](#grouping-auras) |
 
 Relations are relative to the emitter: **ally** is matching disposition, **enemy** is
 opposite, **neutral** is disposition zero. A neutral emitter treats every non-zero
@@ -76,6 +77,28 @@ aura and out the far side costs nothing at all.
 
 If the emitting buff changes — the bard levels up, the aura improves — the copies are
 updated in place rather than removed and remade, so their duration keeps running.
+
+### Grouping auras
+
+A character with several auras – a paladin's Aura of Courage, Resolve, and Righteousness –
+would otherwise put several buffs on everyone nearby. Give those buffs the same **Group**
+(e.g. `Paladin Aura`) and each ally gets **one** buff instead, named `Paladin Aura (Meraxes)`,
+holding everything from the members that reach them.
+
+- Each member keeps its own radius and recipients. An ally only reached by some members gets
+  just those.
+- Changes, context notes, conditions, and script calls are combined, and the description has
+  one section per member.
+- The **first** member in sheet order supplies the icon and duration. Drag the buff you want
+  first to the top.
+- Gaining a new member, such as Aura of Resolve at 8th level, updates the existing buff
+  rather than adding another.
+- Group names match ignoring case, and only within one character: two paladins still give
+  two buffs.
+
+If two members disagree on a setting that can't be combined (the same roll-bonuses flag with
+different values, for example), the odd one out is shared as its own buff, and the console
+says which and why.
 
 ## Settings
 

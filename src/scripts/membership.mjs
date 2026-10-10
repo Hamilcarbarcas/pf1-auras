@@ -151,7 +151,8 @@ export function recompute() {
 
     for (const emitter of emitters.values()) {
       for (const [actorUuid, target] of actors) {
-        if (actorUuid === emitter.actor.uuid && !emitter.cfg.includeSelf) continue;
+        // The owner already has the emitting buff. DESIGN.md §6A.4
+        if (actorUuid === emitter.actor.uuid) continue;
         if (!reaches(emitter, target)) continue;
         let set = next.get(actorUuid);
         if (!set) next.set(actorUuid, (set = new Set()));

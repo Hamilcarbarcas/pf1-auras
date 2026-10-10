@@ -13,11 +13,12 @@ export function normalize(partial = {}, base = DEFAULT_AURA) {
 
   cfg.enabled = !!cfg.enabled;
   cfg.radius = String(cfg.radius ?? "").trim();
-  cfg.includeSelf = !!cfg.includeSelf;
   cfg.whileInactive = !!cfg.whileInactive;
   cfg.whileUnconscious = !!cfg.whileUnconscious;
   cfg.ignoreElevation = !!cfg.ignoreElevation;
+  cfg.group = String(cfg.group ?? "").trim();
   delete cfg.mode; // dropped with Fast mode; see DESIGN.md §4.3
+  delete cfg.includeSelf; // the owner already has the buff; see DESIGN.md §6A.4
 
   // A single relation string is accepted for convenience; "all" means every relation.
   let rel = cfg.recipients;
@@ -34,6 +35,9 @@ export function read(item) {
   if (!raw || typeof raw !== "object") return null;
   return normalize(raw);
 }
+
+/** Comparison form of a group name; empty when ungrouped. DESIGN.md §13.3 */
+export const groupKey = (cfg) => (cfg?.group ?? "").toLowerCase();
 
 /** True when the item is an aura that should currently be considered for emission. */
 export function isEmitter(item) {

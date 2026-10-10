@@ -39,7 +39,14 @@
   margin: 3px 0;
 }
 
-/* The source link on a child buff. */
+/* Source links on a child buff; a group child has several. */
+.pfa-aura .pfa-aura-sources {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* A source link. */
 .pfa-aura .pfa-aura-open {
   color: var(--pf1-control-color, #782e22);
   text-decoration: underline dotted;

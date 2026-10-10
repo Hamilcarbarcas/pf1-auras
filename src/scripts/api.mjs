@@ -29,8 +29,8 @@ export const api = {
    *   game.pf1Auras.configure(item, { enabled: true, radius: "30", recipients: ["ally"] });
    *   game.pf1Auras.configure("Actor.abc.Item.def", { radius: "10 + @classes.paladin.level" });
    *
-   * Fields: enabled, radius, recipients (["ally"|"enemy"|"neutral"] or "all"), includeSelf,
-   * whileInactive, whileUnconscious, ignoreElevation.
+   * Fields: enabled, radius, recipients (["ally"|"enemy"|"neutral"] or "all"),
+   * whileInactive, whileUnconscious, ignoreElevation, group.
    */
   configure: (target, partial) => config.write(asItem(target), partial),
 
@@ -72,7 +72,8 @@ export const api = {
 
     console.error(`${MODULE_ID} | ${emitters.size} emitter(s) on ${canvas.scene?.name ?? "no scene"}`);
     for (const e of emitters.values()) {
-      console.error(`  ${e.actor.name} :: ${e.item.name} — ${e.radius} ft, ${e.cfg.recipients.join("+")}`);
+      const group = e.cfg.group ? `, group "${e.cfg.group}"` : "";
+      console.error(`  ${e.actor.name} :: ${e.item.name} — ${e.radius} ft, ${e.cfg.recipients.join("+")}${group}`);
     }
 
     console.error(`${MODULE_ID} | ${map.size} actor(s) receiving`);
