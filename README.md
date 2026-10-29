@@ -24,9 +24,9 @@ and loses it when they leave.
 
 ## Configuring an aura
 
-Open a buff and go to its **Advanced** tab. The **Aura** section is collapsed until you use
-it; when configured, the header shows the resolved radius so you can read it at a glance
-without expanding.
+Open a buff and go to its **Advanced** tab. The **Aura** section is hidden until you use it:
+click **Show N more sections** at the foot of the tab to reveal it. When configured, the header
+shows the resolved radius so you can read it at a glance without expanding.
 
 Tick **Share this buff as an aura**, set a radius, and choose who receives it.
 

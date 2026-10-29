@@ -192,6 +192,7 @@ export async function inject(sheet, html, options) {
     configured: !!stored?.enabled,
     badge: "",
     title: t("PF1AURAS.Sheet.Toggle"),
+    niche: true,
   });
   badge();
 }

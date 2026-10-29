@@ -62,3 +62,6 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   from HP. This handles Diehard — including the player's choice to keep fighting — along
   with Ferocity, Last Stand and anything else that keeps a character up, and it catches
   being knocked out at full HP.
+
+### Changed
+- The **Aura** section is hidden on buffs that don't use it. A **Show N more sections** line at the foot of the Advanced tab reveals it (shared sheet kit 1.7.0).
