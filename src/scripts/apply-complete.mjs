@@ -114,6 +114,11 @@ function buildSingle(emitter, rollData) {
 // group a conflict. The lead's copy is kept.
 const BOOKKEEPING = new Set(["core", "scene-packer", MODULE_ID]);
 
+// The same, for single keys inside a namespace that also holds real flags. PF1 stamps
+// `source` with the compendium uuid a supplement was copied from (item-base.mjs:371), and
+// `migration` with the system version that last migrated the item.
+const BOOKKEEPING_KEYS = { pf1: new Set(["source", "migration"]) };
+
 // Members already reported as split out, so a flush per move doesn't repeat the message.
 const warned = new Set();
 
@@ -123,7 +128,15 @@ const bySheetOrder = (a, b) =>
   a.item.id.localeCompare(b.item.id);
 
 const comparable = (flags) =>
-  Object.fromEntries(Object.entries(flags ?? {}).filter(([ns]) => !BOOKKEEPING.has(ns)));
+  Object.fromEntries(
+    Object.entries(flags ?? {})
+      .filter(([ns]) => !BOOKKEEPING.has(ns))
+      .map(([ns, block]) => {
+        const skip = BOOKKEEPING_KEYS[ns];
+        if (!skip || !block || typeof block !== "object") return [ns, block];
+        return [ns, Object.fromEntries(Object.entries(block).filter(([k]) => !skip.has(k)))];
+      })
+  );
 
 /** Leaf values of a nested object by dotted path. Arrays are leaves. */
 function leaves(obj, prefix = "", out = new Map()) {

@@ -29,6 +29,8 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
 
 - Editing an aura buff's module settings, such as a roll-bonuses bonus, now reaches the
   copies other characters hold. Previously only changes, notes, and other system data did.
+- **Grouped auras that came with a class (such as a paladin's) now combine into one buff.**
+  Each was wrongly treated as conflicting with the others and shared as a separate buff.
 - **Adding or changing an entry in a sheet section no longer jumps the sheet back to the top of
   the tab.** Sections from the shared sheet kit now restore the scroll position once they have
   drawn.
@@ -64,4 +66,4 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   being knocked out at full HP.
 
 ### Changed
-- The **Aura** section is hidden on buffs that don't use it. A **Show N more sections** line at the foot of the Advanced tab reveals it (shared sheet kit 1.7.0).
+- The **Aura** section is hidden on buffs that don't use it. Tick it under **Optional Sections** on the Advanced tab to show it (shared sheet kit 1.8.0).
