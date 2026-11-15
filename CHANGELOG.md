@@ -31,6 +31,8 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
   copies other characters hold. Previously only changes, notes, and other system data did.
 - **Grouped auras that came with a class (such as a paladin's) now combine into one buff.**
   Each was wrongly treated as conflicting with the others and shared as a separate buff.
+  This also covers auras granted through PF1 Enhanced Links, whose link records no longer
+  count as a conflict or get copied onto the characters receiving the aura.
 - **Adding or changing an entry in a sheet section no longer jumps the sheet back to the top of
   the tab.** Sections from the shared sheet kit now restore the scroll position once they have
   drawn.

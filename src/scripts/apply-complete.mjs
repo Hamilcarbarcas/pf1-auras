@@ -22,6 +22,11 @@ let rerun = false;
 /** Only one client may write. */
 const isPrimaryWriter = () => game.users.activeGM?.isSelf ?? false;
 
+// pf1-enhanced-links keeps per-item ledgers of parent ids and source uuids on the
+// EMITTER's actor (dedupe.mjs). They differ between items by construction.
+const ENHANCED_LINKS = "pf1-enhanced-links";
+const LINK_LEDGERS = new Set(["claims", "aliases", "grantSource", "granted"]);
+
 /** FNV-1a, enough to notice a parent's resolved payload changing. */
 function hash(str) {
   let h = 0x811c9dc5;
@@ -80,6 +85,14 @@ function finalize(data, { key, label, members }) {
   // charge or child link would either do nothing or resolve against the wrong sheet.
   data.system.links = {};
 
+  // The same for enhanced-links' per-item ledgers, which would also make the recipient's
+  // enhanced-links treat the child as a supplement it manages.
+  const linkFlags = data.flags?.[ENHANCED_LINKS];
+  if (linkFlags && typeof linkFlags === "object") {
+    for (const k of LINK_LEDGERS) delete linkFlags[k];
+    if (!Object.keys(linkFlags).length) delete data.flags[ENHANCED_LINKS];
+  }
+
   // `members` is left out for an ungrouped child so its hash matches what earlier versions
   // wrote, and the upgrade touches nothing.
   const payload = hash(
@@ -117,7 +130,7 @@ const BOOKKEEPING = new Set(["core", "scene-packer", MODULE_ID]);
 // The same, for single keys inside a namespace that also holds real flags. PF1 stamps
 // `source` with the compendium uuid a supplement was copied from (item-base.mjs:371), and
 // `migration` with the system version that last migrated the item.
-const BOOKKEEPING_KEYS = { pf1: new Set(["source", "migration"]) };
+const BOOKKEEPING_KEYS = { pf1: new Set(["source", "migration"]), [ENHANCED_LINKS]: LINK_LEDGERS };
 
 // Members already reported as split out, so a flush per move doesn't repeat the message.
 const warned = new Set();
