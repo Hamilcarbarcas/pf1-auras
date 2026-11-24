@@ -65,6 +65,35 @@ function childMarkup(item) {
 </div>`;
 }
 
+/** Pass-on rows: a name and a formula each, resolved against this buff. DESIGN.md §14 */
+function passOnMarkup(cfg) {
+  const rows = cfg.data
+    .map(
+      (row, i) => `
+    <div class="form-group ${MARKER}-pass-row" data-index="${i}">
+      <div class="form-fields">
+        <input type="text" class="${MARKER}-pass-name" value="${esc(row.name)}"
+               placeholder="${t("PF1AURAS.Sheet.PassOnName")}"/>
+        <input type="text" class="${MARKER}-pass-formula" value="${esc(row.formula)}"
+               placeholder="${t("PF1AURAS.Sheet.PassOnFormula")}"/>
+        <span class="pfa-preview ${MARKER}-pass-preview"></span>
+        <a class="${MARKER}-pass-delete" data-tooltip="${t("PF1AURAS.Sheet.PassOnDelete")}"><i class="fa-solid fa-trash"></i></a>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  return `
+    <div class="form-group">
+      <label>${t("PF1AURAS.Sheet.PassOn")}</label>
+      <div class="form-fields">
+        <a class="${MARKER}-pass-add" data-tooltip="${t("PF1AURAS.Sheet.PassOnAdd")}"><i class="fa-solid fa-plus"></i></a>
+      </div>
+    </div>
+    ${rows}
+    <p class="notes">${t("PF1AURAS.Sheet.PassOnHint")}</p>`;
+}
+
 /** Editable face shown on an ordinary buff. */
 function editorMarkup(cfg) {
   const checked = (on) => (on ? " checked" : "");
@@ -120,6 +149,7 @@ function editorMarkup(cfg) {
       </div>
     </div>
     <p class="notes">${t("PF1AURAS.Sheet.GroupHint")}</p>
+${passOnMarkup(cfg)}
 
     <div class="form-group">
       <div class="form-fields ${MARKER}-checks">${switches}</div>
@@ -186,6 +216,8 @@ export async function inject(sheet, html, options) {
     },
   });
 
+  wirePassOn(item, section);
+
   makeCollapsible(sheet, section, {
     key: "aura",
     marker: MARKER,
@@ -195,6 +227,43 @@ export async function inject(sheet, html, options) {
     niche: true,
   });
   badge();
+}
+
+/** Pass-on rows persist as one array; add and delete redraw, edits don't. */
+function wirePassOn(item, section) {
+  const path = `flags.${MODULE_ID}.${AURA_FLAG}.data`;
+  const rows = () =>
+    [...section.querySelectorAll(`.${MARKER}-pass-row`)].map((row) => ({
+      name: row.querySelector(`.${MARKER}-pass-name`).value.replace(/[^A-Za-z0-9_]/g, ""),
+      formula: row.querySelector(`.${MARKER}-pass-formula`).value.trim(),
+    }));
+  const rollData = item.getRollData();
+
+  for (const row of section.querySelectorAll(`.${MARKER}-pass-row`)) {
+    const name = row.querySelector(`.${MARKER}-pass-name`);
+    const formula = row.querySelector(`.${MARKER}-pass-formula`);
+    const refresh = attachFormulaPreview(formula, rollData, { target: row.querySelector(`.${MARKER}-pass-preview`) });
+
+    for (const input of [name, formula]) {
+      input.addEventListener("change", (event) => {
+        event.stopPropagation();
+        if (input === name) name.value = name.value.replace(/[^A-Za-z0-9_]/g, "");
+        refresh?.();
+        item.update({ [path]: rows() }, { render: false });
+      });
+    }
+
+    row.querySelector(`.${MARKER}-pass-delete`)?.addEventListener("click", (event) => {
+      event.preventDefault();
+      const kept = rows().filter((_, i) => i !== Number(row.dataset.index));
+      item.update({ [path]: kept });
+    });
+  }
+
+  section.querySelector(`.${MARKER}-pass-add`)?.addEventListener("click", (event) => {
+    event.preventDefault();
+    item.update({ [path]: [...rows(), { name: "", formula: "" }] });
+  });
 }
 
 export function registerHooks() {

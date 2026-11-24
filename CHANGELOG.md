@@ -6,6 +6,10 @@ Phases 1–2 — the membership engine, and auras applied as real buff items.
 
 ### Added
 
+- **Pass-on values.** An aura can pass named values to its copies, each a formula worked out
+  from the emitting creature, read on the copy as `@sourceInfo.<name>`. A Flaming Aura's
+  save DC can now come from the emitter's Hit Dice and Constitution instead of whoever is
+  standing in it.
 - **Aura groups.** Buffs on one character that share a **Group** name arrive on each
   recipient as a single buff, so a paladin's three auras put one buff on each ally instead
   of three. Fewer buffs means less lag when allies move in and out of range, and fewer

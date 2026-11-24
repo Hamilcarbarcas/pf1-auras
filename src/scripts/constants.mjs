@@ -17,4 +17,5 @@ export const DEFAULT_AURA = Object.freeze({
   whileUnconscious: false,
   ignoreElevation: false,
   group: "",
+  data: Object.freeze([]), // pass-on rows [{ name, formula }] -> @sourceInfo.<name>   (§14)
 });

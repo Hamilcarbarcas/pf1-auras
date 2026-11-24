@@ -52,3 +52,22 @@
   text-decoration: underline dotted;
   cursor: pointer;
 }
+
+/* Pass-on rows: name narrow, formula takes the rest. */
+.pfa-aura .pfa-aura-pass-row .pfa-aura-pass-name {
+  flex: 0 0 8em;
+}
+
+.pfa-aura .pfa-aura-pass-row .pfa-aura-pass-formula {
+  flex: 1 1 auto;
+}
+
+.pfa-aura .pfa-aura-pass-add,
+.pfa-aura .pfa-aura-pass-delete {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.pfa-aura .pfa-aura-pass-delete:hover {
+  color: var(--color-level-error, #b60000);
+}

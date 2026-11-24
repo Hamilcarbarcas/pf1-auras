@@ -11,6 +11,7 @@ import * as complete from "./apply-complete.mjs";
 import { MODULE_ID } from "./constants.mjs";
 import * as scheduler from "./scheduler.mjs";
 import * as settings from "./settings.mjs";
+import * as sourceInfo from "./source-info.mjs";
 import * as auraSection from "./ui/aura-section.mjs";
 
 Hooks.once("init", () => {
@@ -23,6 +24,7 @@ Hooks.once("init", () => {
     scheduler.registerHooks();
     scheduler.registerApplier("complete", complete.apply);
     auraSection.registerHooks();
+    sourceInfo.registerHooks();
   } catch (err) {
     console.error(`${MODULE_ID} | setup failed:`, err);
     scheduler.setDormant(true);

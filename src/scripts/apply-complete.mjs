@@ -13,6 +13,7 @@
 import { groupKey } from "./config.mjs";
 import { CHILD_FLAG, MODULE_ID } from "./constants.mjs";
 import * as scheduler from "./scheduler.mjs";
+import { resolveInfo } from "./source-info.mjs";
 
 // Writes are async while flushes are not, so a settle during an in-flight reconcile would
 // otherwise interleave and double-create.
@@ -75,7 +76,7 @@ function resolvedCopy(emitter, rollData) {
 }
 
 /** Stamp the child-only fields onto built data and hash it. */
-function finalize(data, { key, label, members }) {
+function finalize(data, { key, label, members, info }) {
   data.name = label;
   data.system.identifiedName = label;
   data.system.active = true;
@@ -93,10 +94,17 @@ function finalize(data, { key, label, members }) {
     if (!Object.keys(linkFlags).length) delete data.flags[ENHANCED_LINKS];
   }
 
-  // `members` is left out for an ungrouped child so its hash matches what earlier versions
+  // `members` and `info` are left out when absent so the hash matches what earlier versions
   // wrote, and the upgrade touches nothing.
+  const hasInfo = !!info && Object.keys(info).length > 0;
   const payload = hash(
-    JSON.stringify({ name: data.name, img: data.img, system: data.system, ...(members ? { members } : {}) })
+    JSON.stringify({
+      name: data.name,
+      img: data.img,
+      system: data.system,
+      ...(members ? { members } : {}),
+      ...(hasInfo ? { info } : {}),
+    })
   );
 
   // The module's flag block is REPLACED, not merged: a child carrying the parent's aura
@@ -105,7 +113,13 @@ function finalize(data, { key, label, members }) {
   delete data.flags[MODULE_ID];
   const flagsHash = hash(JSON.stringify(data.flags));
   data.flags[MODULE_ID] = {
-    [CHILD_FLAG]: { source: key, hash: payload, flagsHash, ...(members ? { members } : {}) },
+    [CHILD_FLAG]: {
+      source: key,
+      hash: payload,
+      flagsHash,
+      ...(members ? { members } : {}),
+      ...(hasInfo ? { info } : {}),
+    },
   };
 
   return { data, payload, flagsHash };
@@ -116,6 +130,7 @@ function buildSingle(emitter, rollData) {
   return finalize(resolvedCopy(emitter, rollData), {
     key: emitter.uuid,
     label: `${emitter.item.name} (${emitter.actor.name})`,
+    info: resolveInfo(emitter.cfg, rollData),
   });
 }
 
@@ -223,15 +238,18 @@ function buildGroup(key, members, rollDataFor) {
   const ids = { changes: new Set(), scriptCalls: new Set() };
   const joined = [];
   const split = [];
+  let info = {};
 
   for (const member of members) {
     const part = member === lead ? data : resolvedCopy(member, rollDataFor(member));
     const ps = part.system;
+    const partInfo = resolveInfo(member.cfg, rollDataFor(member));
 
     if (member !== lead) {
       const where =
         clash(comparable(data.flags), comparable(part.flags), "flags") ??
-        clash(sys.flags.dictionary, ps.flags?.dictionary, "system.flags.dictionary");
+        clash(sys.flags.dictionary, ps.flags?.dictionary, "system.flags.dictionary") ??
+        clash(info, partInfo, "sourceInfo");
       if (where) {
         reportSplit(member, group, where);
         split.push(member);
@@ -244,6 +262,7 @@ function buildGroup(key, members, rollDataFor) {
       for (const [flag, on] of Object.entries(ps.changeFlags ?? {})) if (on) sys.changeFlags[flag] = true;
     }
 
+    info = { ...info, ...partInfo };
     changes.push(...uniqueIds(ps.changes ?? [], ids.changes, member.uuid));
     scriptCalls.push(...uniqueIds(ps.scriptCalls ?? [], ids.scriptCalls, member.uuid));
     contextNotes.push(...(ps.contextNotes ?? []));
@@ -258,7 +277,7 @@ function buildGroup(key, members, rollDataFor) {
   sys.conditions = [...conditions];
   sys.description = { ...sys.description, value: sections.join("") };
 
-  const built = finalize(data, { key, label: `${group} (${lead.actor.name})`, members: joined });
+  const built = finalize(data, { key, label: `${group} (${lead.actor.name})`, members: joined, info });
   return { built, split };
 }
 
@@ -355,12 +374,17 @@ async function reconcile(membershipMap, emitters) {
       } else if (stored.hash !== payload) {
         // Update in place rather than replace, so the duration clock and the underlying
         // Active Effect survive the parent changing.
+        // The update merges, so a pass-on value no longer given is removed explicitly.
+        const child = foundry.utils.deepClone(data.flags[MODULE_ID][CHILD_FLAG]);
+        for (const name of Object.keys(stored.info ?? {})) {
+          if (!(name in (child.info ?? {}))) (child.info ??= {})[`-=${name}`] = null;
+        }
         updates.push({
           _id: current.id,
           name: data.name,
           img: data.img,
           system: data.system,
-          [`flags.${MODULE_ID}.${CHILD_FLAG}`]: data.flags[MODULE_ID][CHILD_FLAG],
+          [`flags.${MODULE_ID}.${CHILD_FLAG}`]: child,
         });
       }
     }

@@ -30,7 +30,8 @@ export const api = {
    *   game.pf1Auras.configure("Actor.abc.Item.def", { radius: "10 + @classes.paladin.level" });
    *
    * Fields: enabled, radius, recipients (["ally"|"enemy"|"neutral"] or "all"),
-   * whileInactive, whileUnconscious, ignoreElevation, group.
+   * whileInactive, whileUnconscious, ignoreElevation, group,
+   * data ([{ name, formula }], read on copies as @sourceInfo.<name>; DESIGN.md §14).
    */
   configure: (target, partial) => config.write(asItem(target), partial),
 

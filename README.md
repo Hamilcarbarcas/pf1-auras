@@ -60,6 +60,7 @@ game.pf1Auras.configure(item, { enabled: true, radius: "30", recipients: ["ally"
 | `whileUnconscious` | `false` | Emit even while the emitter is unconscious or dead |
 | `ignoreElevation` | `false` | Treat height differences as zero distance |
 | `group` | `""` | Merge with this actor's other auras of the same group – see [Grouping auras](#grouping-auras) |
+| `data` | `[]` | Pass-on values, `[{ name, formula }]` – see [Passing values to the copies](#passing-values-to-the-copies) |
 
 Relations are relative to the emitter: **ally** is matching disposition, **enemy** is
 opposite, **neutral** is disposition zero. A neutral emitter treats every non-zero
@@ -99,6 +100,31 @@ holding everything from the members that reach them.
 If two members disagree on a setting that can't be combined (the same roll-bonuses flag with
 different values, for example), the odd one out is shared as its own buff, and the console
 says which and why.
+
+### Passing values to the copies
+
+A copy's changes are worked out from the emitter's numbers, but anything else on the buff
+(a damage over time formula, a save DC, a script) is read on the creature it landed on. When
+that needs the emitter's numbers instead, add a **Pass on** value: a name and a formula,
+worked out from the emitting creature and carried on every copy.
+
+Read it as `@sourceInfo.<name>` anywhere the buff's own formulas are read. A Flaming Aura
+whose save DC is 10 + half the emitter's Hit Dice + its Constitution modifier:
+
+- Pass on: `dc` = `10 + floor(@attributes.hd.total / 2) + @abilities.con.mod`
+- The buff's damage over time save DC: `@sourceInfo.dc`
+
+The emitter's own buff reads the same value from itself, so the formula works there too,
+and the readout beside each row shows what it comes to. A formula with dice is passed on as
+written (with its `@` references filled in) rather than rolled.
+
+The name is the one astora-mod's Buff Delivery uses for its values, so a buff that can arrive
+either way needs one formula. If a delivered buff carries a value of the same name, that one
+wins. In a group, members passing different values under one name are split apart like any
+other disagreement.
+
+Values follow the emitter the way its changes do: when the copies are next brought up to
+date (movement, a turn change, an edit to the aura), they carry the current numbers.
 
 ## Settings
 

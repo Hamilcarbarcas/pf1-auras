@@ -17,6 +17,15 @@ export function normalize(partial = {}, base = DEFAULT_AURA) {
   cfg.whileUnconscious = !!cfg.whileUnconscious;
   cfg.ignoreElevation = !!cfg.ignoreElevation;
   cfg.group = String(cfg.group ?? "").trim();
+  // Blank rows are kept so a row just added on the sheet doesn't vanish. DESIGN.md §14
+  cfg.data = Array.isArray(cfg.data)
+    ? cfg.data
+        .filter((row) => row && typeof row === "object")
+        .map((row) => ({
+          name: String(row.name ?? "").replace(/[^A-Za-z0-9_]/g, ""),
+          formula: String(row.formula ?? "").trim(),
+        }))
+    : [];
   delete cfg.mode; // dropped with Fast mode; see DESIGN.md §4.3
   delete cfg.includeSelf; // the owner already has the buff; see DESIGN.md §6A.4
 
